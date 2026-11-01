@@ -296,8 +296,17 @@ function initApp() {
     if (firstInput) firstInput.focus();
   }
 
-  function normalize(str) {
-    return (str || '').trim().toLowerCase().replace(/[.,!?;:—–\-«»"()]/g, '').replace(/\s+/g, ' ');
+    function normalize(str) {
+    if (!str) return '';
+    
+    return str
+      .trim()
+      .toLowerCase()
+      // Убираем знаки препинания, кавычки и тире
+      .replace(/[.,!?;:—–\-«»"()]/g, '')
+      // Заменяем любые пробелы (включая множественные) на пустоту. 
+      // Благодаря этому "кто-то", "кто то" и "ктото" будут считаться одинаковыми.
+      .replace(/\s+/g, ''); 
   }
 
   document.getElementById('btn-submit').addEventListener('click', () => {
