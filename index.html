@@ -20,9 +20,11 @@
     <section id="screen-auth" class="screen active">
       <h2 id="auth-title">Вход в систему</h2>
       <p class="hint" id="auth-hint">Введите Email и пароль. Если нет аккаунта — нажмите "Зарегистрироваться".</p>
-      
       <input type="email" id="auth-login" placeholder="Email (например, test@mail.ru)..." style="margin-bottom: 10px;">
-      <input type="password" id="auth-password" placeholder="Пароль (минимум 6 символов)..." style="margin-bottom: 16px;">
+            <div style="position: relative; margin-bottom: 16px;">
+        <input type="password" id="auth-password" placeholder="Пароль (минимум 6 символов)..." style="width: 100%; padding-right: 40px;">
+        <button type="button" id="toggle-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; opacity: 0.6; padding: 5px;">👁️</button>
+      </div>
       
       <button id="btn-login" class="btn btn-primary" style="margin-bottom: 10px;">Войти</button>
       <button id="btn-register-mode" class="btn btn-secondary" style="width: 100%;">У меня нет аккаунта (Регистрация)</button>
