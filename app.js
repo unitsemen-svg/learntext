@@ -1,12 +1,13 @@
-// ===== База данных пользователей (имитация через LocalStorage) =====
+// ===== База данных пользователей =====
 let currentUser = localStorage.getItem('tm_currentUser') || null;
+let isRegisterMode = false; // Флаг: вход или регистрация
 
 function getUsers() { return JSON.parse(localStorage.getItem('tm_users')) || {}; }
 function saveUsers(users) { localStorage.setItem('tm_users', JSON.stringify(users)); }
 
 // ===== Состояние приложения =====
 const state = {
-  currentTextObj: null,  // Объект текущего текста
+  currentTextObj: null,
   chunkIndex: 0, currentRepeat: 0, forceReadAgain: false
 };
 
@@ -26,26 +27,64 @@ function showScreen(name) {
 }
 
 // ===== АВТОРИЗАЦИЯ =====
-document.getElementById('btn-login').addEventListener('click', () => {
-  const name = document.getElementById('auth-name').value.trim();
-  if (!name) return alert('Введите имя!');
-  
-  currentUser = name;
-  localStorage.setItem('tm_currentUser', currentUser);
-  
-  // Создаем пользователя, если его нет
-  const users = getUsers();
-  if (!users[currentUser]) {
-    users[currentUser] = { texts: [] };
-    saveUsers(users);
+const authTitle = document.getElementById('auth-title');
+const authHint = document.getElementById('auth-hint');
+const btnLogin = document.getElementById('btn-login');
+const btnRegMode = document.getElementById('btn-register-mode');
+
+// Переключение на режим регистрации
+btnRegMode.addEventListener('click', () => {
+  isRegisterMode = !isRegisterMode;
+  if (isRegisterMode) {
+    authTitle.textContent = 'Регистрация';
+    authHint.textContent = 'Придумайте логин и пароль. Если логин занят, попробуйте другой.';
+    btnLogin.textContent = 'Зарегистрироваться';
+    btnRegMode.textContent = 'У меня уже есть аккаунт (Войти)';
+  } else {
+    authTitle.textContent = 'Вход в систему';
+    authHint.textContent = 'Введите логин и пароль.';
+    btnLogin.textContent = 'Войти';
+    btnRegMode.textContent = 'У меня нет аккаунта (Регистрация)';
   }
-  initMenu();
+});
+
+// Кнопка Войти/Зарегистрироваться
+btnLogin.addEventListener('click', () => {
+  const login = document.getElementById('auth-login').value.trim();
+  const password = document.getElementById('auth-password').value;
+
+  if (!login || !password) return alert('Заполните логин и пароль!');
+
+  const users = getUsers();
+
+  if (isRegisterMode) {
+    // РЕГИСТРАЦИЯ
+    if (users[login]) return alert('Этот логин уже занят!');
+    users[login] = { password: password, texts: [] };
+    saveUsers(users);
+    alert('Аккаунт создан! Теперь войдите.');
+    
+    // Переключаем обратно на вход
+    isRegisterMode = false;
+    btnRegMode.click();
+    document.getElementById('auth-password').value = '';
+    
+  } else {
+    // ВХОД
+    if (!users[login]) return alert('Пользователь не найден!');
+    if (users[login].password !== password) return alert('Неверный пароль!');
+
+    currentUser = login;
+    localStorage.setItem('tm_currentUser', currentUser);
+    document.getElementById('auth-login').value = '';
+    document.getElementById('auth-password').value = '';
+    initMenu();
+  }
 });
 
 document.getElementById('btn-logout').addEventListener('click', () => {
   currentUser = null;
   localStorage.removeItem('tm_currentUser');
-  document.getElementById('auth-name').value = '';
   document.getElementById('user-panel').style.display = 'none';
   showScreen('auth');
 });
@@ -53,14 +92,12 @@ document.getElementById('btn-logout').addEventListener('click', () => {
 function checkAuth() {
   if (currentUser) {
     const users = getUsers();
-    if (!users[currentUser]) {
-      users[currentUser] = { texts: [] };
-      saveUsers(users);
+    if (users[currentUser]) {
+      initMenu();
+      return;
     }
-    initMenu();
-  } else {
-    showScreen('auth');
   }
+  showScreen('auth');
 }
 
 // ===== ГЛАВНОЕ МЕНЮ =====
@@ -117,10 +154,13 @@ document.getElementById('btn-start').addEventListener('click', () => {
 
   const newText = { title, lines, chunkSize, repeatsPerChunk };
   
-  // Сохраняем
   const users = getUsers();
   users[currentUser].texts.push(newText);
   saveUsers(users);
+
+  // Очищаем поля
+  document.getElementById('text-title').value = '';
+  document.getElementById('text-input').value = '';
 
   state.currentTextObj = newText;
   startLearning();
@@ -150,7 +190,6 @@ function showViewScreen() {
   const viewLines = document.getElementById('view-lines');
   viewLines.innerHTML = '';
   
-  // Если была ошибка, добавляем предупреждение
   if (state.forceReadAgain) {
     const warn = document.createElement('div');
     warn.style.cssText = 'color: #e53e3e; font-weight: bold; margin-bottom: 10px; text-align: center;';
@@ -170,7 +209,7 @@ function showViewScreen() {
   document.getElementById('progress-text').textContent = `Блок ${state.chunkIndex + 1} из ${total} · повтор ${state.currentRepeat + 1}/${state.currentTextObj.repeatsPerChunk}`;
   
   showScreen('view');
-  state.forceReadAgain = false; // Сбрасываем флаг после показа
+  state.forceReadAgain = false;
 }
 
 document.getElementById('btn-next').addEventListener('click', showCheckScreen);
@@ -239,13 +278,11 @@ function showResultScreen(results, allCorrect) {
   const btnContinue = document.getElementById('btn-continue');
 
   if (!allCorrect) {
-    // ЕСЛИ ОШИБКА: заставляем перечитать этот же блок, скрываем кнопку продолжить
     btnRepeat.style.display = 'block';
     btnRepeat.textContent = 'Прочитать заново →';
     btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
     btnContinue.style.display = 'none';
   } else {
-    // ЕСЛИ ВСЁ ВЕРНО
     btnRepeat.style.display = 'block';
     btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
     
@@ -265,10 +302,8 @@ function showResultScreen(results, allCorrect) {
   showScreen('result');
 }
 
-// ===== ФИНАЛ =====
 document.getElementById('btn-back-to-menu').addEventListener('click', () => {
   initMenu();
 });
 
-// Старт при загрузке
 checkAuth();
