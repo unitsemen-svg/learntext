@@ -1,11 +1,12 @@
 // ВСТАВЬ СЮДА СВОЙ КОД ИЗ FIREBASE (Project Settings -> General -> Your apps -> </>)
 const firebaseConfig = {
-  apiKey: "ТВОЙ_API_KEY",
-  authDomain: "ТВОЙ_ПРОЕКТ.firebaseapp.com",
-  projectId: "ТВОЙ_ПРОЕКТ",
-  storageBucket: "ТВОЙ_ПРОЕКТ.appspot.com",
-  messagingSenderId: "ТВОЙ_ID",
-  appId: "ТВОЙ_APP_ID"
+  apiKey: "AIzaSyAgn_ddh5FfYTjVEhAk63ofdYOuDFb6yn4",
+  authDomain: "learntext-e3c3d.firebaseapp.com",
+  projectId: "learntext-e3c3d",
+  storageBucket: "learntext-e3c3d.firebasestorage.app",
+  messagingSenderId: "331950558496",
+  appId: "1:331950558496:web:d9fd6575188b15ab2b1b45",
+  measurementId: "G-ZXFEVV7EJZ"
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
