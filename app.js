@@ -14,7 +14,8 @@ function initApp() {
 
   let currentUser = null;
   let isRegisterMode = false;
-  let state = { currentTextObj: null, chunkIndex: 0, currentRepeat: 0, forceReadAgain: false };
+  // Добавили isCombinedCheck
+  let state = { currentTextObj: null, chunkIndex: 0, currentRepeat: 0, forceReadAgain: false, isCombinedCheck: false };
 
   const screens = {
     auth: document.getElementById('screen-auth'),
@@ -190,11 +191,16 @@ function initApp() {
     state.chunkIndex = 0;
     state.currentRepeat = 0;
     state.forceReadAgain = false;
+    state.isCombinedCheck = false;
     showViewScreen();
   }
 
   function getCurrentChunk() {
     const t = state.currentTextObj;
+    if (state.isCombinedCheck) {
+      // Если это совместная проверка, берем весь текущий блок
+      return t.lines.slice(state.chunkIndex * t.chunkSize, state.chunkIndex * t.chunkSize + t.chunkSize);
+    }
     return t.lines.slice(state.chunkIndex * t.chunkSize, state.chunkIndex * t.chunkSize + t.chunkSize);
   }
 
@@ -202,9 +208,9 @@ function initApp() {
     return Math.ceil(state.currentTextObj.lines.length / state.currentTextObj.chunkSize);
   }
 
-  // Заполняем список для прыжков
   function renderJumpSelect() {
     const select = document.getElementById('jump-select');
+    if (!select) return;
     select.innerHTML = '';
     const total = getTotalChunks();
     
@@ -215,14 +221,13 @@ function initApp() {
       select.appendChild(option);
     }
     
-    // Выделяем текущий блок
     select.value = state.chunkIndex;
     
-    // Обработка выбора
     select.onchange = (e) => {
       state.chunkIndex = parseInt(e.target.value, 10);
-      state.currentRepeat = 0; // Сбрасываем повторы при прыжке
+      state.currentRepeat = 0;
       state.forceReadAgain = false;
+      state.isCombinedCheck = false;
       showViewScreen();
     };
   }
@@ -252,14 +257,16 @@ function initApp() {
     document.getElementById('progress-fill').style.width = (state.chunkIndex / total) * 100 + '%';
     document.getElementById('progress-text').textContent = `Блок ${state.chunkIndex + 1} из ${total} · повтор ${state.currentRepeat + 1}/${state.currentTextObj.repeatsPerChunk}`;
     
-    // Обновляем выпадающий список
     renderJumpSelect();
     
     showScreen('view');
     state.forceReadAgain = false;
   }
 
-  document.getElementById('btn-next').addEventListener('click', showCheckScreen);
+  document.getElementById('btn-next').addEventListener('click', () => {
+    state.isCombinedCheck = false; // Сбрасываем флаг при обычном старте
+    showCheckScreen();
+  });
 
   function showCheckScreen() {
     const chunk = getCurrentChunk();
@@ -296,17 +303,9 @@ function initApp() {
     if (firstInput) firstInput.focus();
   }
 
-    function normalize(str) {
+  function normalize(str) {
     if (!str) return '';
-    
-    return str
-      .trim()
-      .toLowerCase()
-      // Убираем знаки препинания, кавычки и тире
-      .replace(/[.,!?;:—–\-«»"()]/g, '')
-      // Заменяем любые пробелы (включая множественные) на пустоту. 
-      // Благодаря этому "кто-то", "кто то" и "ктото" будут считаться одинаковыми.
-      .replace(/\s+/g, ''); 
+    return str.trim().toLowerCase().replace(/[.,!?;:—–\-«»"()]/g, '').replace(/\s+/g, '');
   }
 
   document.getElementById('btn-submit').addEventListener('click', () => {
@@ -343,15 +342,47 @@ function initApp() {
 
     const btnRepeat = document.getElementById('btn-repeat');
     const btnContinue = document.getElementById('btn-continue');
+    const btnCombined = document.getElementById('btn-combined-check');
 
+    // Логика отображения кнопок
     if (!allCorrect) {
+      // Если ошибка - заставляем перечитать
+      btnCombined.style.display = 'none';
       btnRepeat.style.display = 'block';
       btnRepeat.textContent = 'Прочитать заново →';
       btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
       btnContinue.style.display = 'none';
-    } else {
+      
+    } else if (state.isCombinedCheck) {
+      // Если это была совместная проверка и всё верно - идем дальше
+      btnCombined.style.display = 'none';
       btnRepeat.style.display = 'block';
       btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
+      
+      btnContinue.style.display = 'block';
+      btnContinue.onclick = () => {
+        state.isCombinedCheck = false;
+        state.currentRepeat = 0;
+        state.chunkIndex++;
+        if (state.chunkIndex >= getTotalChunks()) showScreen('done');
+        else showViewScreen();
+      };
+      
+    } else {
+      // Если обычная проверка и всё верно
+      btnRepeat.style.display = 'block';
+      btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
+      
+      // Если это последний повтор в блоке и строчек больше 1, предлагаем "Написать всё вместе"
+      if (state.currentRepeat === state.currentTextObj.repeatsPerChunk - 1 && state.currentTextObj.chunkSize > 1) {
+        btnCombined.style.display = 'block';
+        btnCombined.onclick = () => {
+          state.isCombinedCheck = true;
+          showCheckScreen(); // Открываем ввод, но без показа текста
+        };
+      } else {
+        btnCombined.style.display = 'none';
+      }
       
       btnContinue.style.display = 'block';
       btnContinue.onclick = () => {
