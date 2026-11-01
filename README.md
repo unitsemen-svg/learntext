@@ -1,1 +1,1 @@
-# unitsemen-svg.github.io/learn-text
+# https://unitsemen-svg.github.io/learntext/
