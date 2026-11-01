@@ -18,10 +18,14 @@
 
     <!-- ЭКРАН АВТОРИЗАЦИИ -->
     <section id="screen-auth" class="screen active">
-      <h2>Вход в систему</h2>
-      <p class="hint">Введите имя, чтобы сохранять свои тексты и прогресс.</p>
-      <input type="text" id="auth-name" placeholder="Ваше имя..." style="margin-bottom: 12px;">
-      <button id="btn-login" class="btn btn-primary">Войти</button>
+      <h2 id="auth-title">Вход в систему</h2>
+      <p class="hint" id="auth-hint">Введите логин и пароль. Если у вас нет аккаунта — нажмите "Зарегистрироваться".</p>
+      
+      <input type="text" id="auth-login" placeholder="Логин..." style="margin-bottom: 10px;">
+      <input type="password" id="auth-password" placeholder="Пароль..." style="margin-bottom: 16px;">
+      
+      <button id="btn-login" class="btn btn-primary" style="margin-bottom: 10px;">Войти</button>
+      <button id="btn-register-mode" class="btn btn-secondary" style="width: 100%;">У меня нет аккаунта (Регистрация)</button>
     </section>
 
     <!-- ГЛАВНОЕ МЕНЮ -->
