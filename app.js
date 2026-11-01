@@ -30,12 +30,26 @@ function initApp() {
     screens[name].classList.add('active');
   }
 
-  // ===== АВТОРИЗАЦИЯ =====
+  // ===== АВТОРИЗАЦИЯ И ГЛАЗИК =====
   const authTitle = document.getElementById('auth-title');
   const authHint = document.getElementById('auth-hint');
   const btnLogin = document.getElementById('btn-login');
   const btnRegMode = document.getElementById('btn-register-mode');
+  
+  // Логика глазика для пароля
+  const togglePasswordBtn = document.getElementById('toggle-password');
+  const passwordInput = document.getElementById('auth-password');
 
+  if (togglePasswordBtn && passwordInput) {
+    togglePasswordBtn.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      // Меняем иконку (открытый/закрытый глаз)
+      togglePasswordBtn.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+  }
+
+  // Переключение Вход / Регистрация
   btnRegMode.addEventListener('click', () => {
     isRegisterMode = !isRegisterMode;
     if (isRegisterMode) {
