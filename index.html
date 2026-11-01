@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📝 Text Memorizer — учим тексты</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>📝 Text Memorizer</h1>
+      <p class="subtitle">Учи текст по 2 строчки за раз</p>
+    </header>
+    <section id="screen-input" class="screen active">
+      <h2>Шаг 1. Вставь текст</h2>
+      <p class="hint">Каждая строка — отдельная строчка для заучивания.</p>
+      <textarea id="text-input" placeholder="Вставь сюда текст..."></textarea>
+      <div class="settings">
+        <label>Строчек за раз: <select id="lines-per-chunk"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select></label>
+        <label>Повторов: <select id="repeats-per-chunk"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></label>
+      </div>
+      <button id="btn-start" class="btn btn-primary">Начать заучивание →</button>
+    </section>
+    <section id="screen-view" class="screen">
+      <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+      <div class="progress-text" id="progress-text">0 / 0</div>
+      <h2>Запомни эти строчки</h2>
+      <div id="view-lines" class="lines-display"></div>
+      <button id="btn-next" class="btn btn-primary">Далее →</button>
+    </section>
+    <section id="screen-check" class="screen">
+      <div class="progress-bar"><div id="progress-fill-check" class="progress-fill"></div></div>
+      <div class="progress-text" id="progress-text-check">0 / 0</div>
+      <h2>Напиши по памяти</h2>
+      <div id="check-inputs" class="check-inputs"></div>
+      <button id="btn-submit" class="btn btn-primary">Проверить ✓</button>
+    </section>
+    <section id="screen-result" class="screen">
+      <h2 id="result-title">Результат</h2>
+      <div id="result-body"></div>
+      <div class="result-buttons">
+        <button id="btn-repeat" class="btn btn-secondary">🔁 Повторить последние</button>
+        <button id="btn-continue" class="btn btn-primary">Продолжить →</button>
+      </div>
+    </section>
+    <section id="screen-done" class="screen">
+      <h2>🎉 Поздравляем!</h2>
+      <p>Ты выучил весь текст!</p>
+      <button id="btn-restart" class="btn btn-secondary">Заново</button>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
