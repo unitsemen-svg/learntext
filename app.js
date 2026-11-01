@@ -202,6 +202,31 @@ function initApp() {
     return Math.ceil(state.currentTextObj.lines.length / state.currentTextObj.chunkSize);
   }
 
+  // Заполняем список для прыжков
+  function renderJumpSelect() {
+    const select = document.getElementById('jump-select');
+    select.innerHTML = '';
+    const total = getTotalChunks();
+    
+    for (let i = 0; i < total; i++) {
+      const option = document.createElement('option');
+      option.value = i;
+      option.textContent = `Блок ${i + 1} (стр. ${i * state.currentTextObj.chunkSize + 1}–${Math.min((i + 1) * state.currentTextObj.chunkSize, state.currentTextObj.lines.length)})`;
+      select.appendChild(option);
+    }
+    
+    // Выделяем текущий блок
+    select.value = state.chunkIndex;
+    
+    // Обработка выбора
+    select.onchange = (e) => {
+      state.chunkIndex = parseInt(e.target.value, 10);
+      state.currentRepeat = 0; // Сбрасываем повторы при прыжке
+      state.forceReadAgain = false;
+      showViewScreen();
+    };
+  }
+
   function showViewScreen() {
     if (state.chunkIndex >= getTotalChunks()) return showScreen('done');
     
@@ -227,6 +252,9 @@ function initApp() {
     document.getElementById('progress-fill').style.width = (state.chunkIndex / total) * 100 + '%';
     document.getElementById('progress-text').textContent = `Блок ${state.chunkIndex + 1} из ${total} · повтор ${state.currentRepeat + 1}/${state.currentTextObj.repeatsPerChunk}`;
     
+    // Обновляем выпадающий список
+    renderJumpSelect();
+    
     showScreen('view');
     state.forceReadAgain = false;
   }
@@ -246,23 +274,18 @@ function initApp() {
       input.placeholder = 'Напиши по памяти...';
       input.autocomplete = 'off';
       
-      // ===== ЛОГИКА ENTER =====
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-          e.preventDefault(); // Запрещаем стандартное поведение (перенос строки/отправку формы)
-          
+          e.preventDefault(); 
           const inputs = document.querySelectorAll('#check-inputs input');
           
           if (i < inputs.length - 1) {
-            // Если это НЕ последнее поле -> переводим фокус на следующее
             inputs[i + 1].focus();
           } else {
-            // Если это ПОСЛЕДНЕЕ поле -> нажимаем кнопку "Проверить"
             document.getElementById('btn-submit').click();
           }
         }
       });
-      // =======================
 
       container.appendChild(label);
       container.appendChild(input);
