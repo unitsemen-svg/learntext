@@ -9,20 +9,23 @@ header h1 { font-size: 24px; color: #4a5568; }
 h2 { font-size: 20px; margin-bottom: 12px; color: #2d3748; }
 h3 { font-size: 16px; margin-bottom: 10px; color: #4a5568; }
 .hint { color: #718096; font-size: 14px; margin-bottom: 16px; }
-input[type="text"], textarea { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; font-family: inherit; }
+input[type="text"], input[type="email"], input[type="password"], textarea { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; font-family: inherit; }
 textarea { min-height: 150px; resize: vertical; }
-input[type="text"]:focus, textarea:focus { outline: none; border-color: #667eea; }
+input:focus, textarea:focus { outline: none; border-color: #667eea; }
 .settings { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
 .settings label { font-size: 14px; color: #4a5568; display: flex; align-items: center; gap: 8px; }
 select { padding: 6px 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: #fff; cursor: pointer; }
 .btn { padding: 14px 28px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .btn-small { padding: 6px 12px; font-size: 12px; background: #edf2f7; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px; }
+.btn-small:hover { background: #cbd5e0; }
 .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; width: 100%; }
 .btn-primary:hover { opacity: 0.9; }
 .btn-secondary { background: #edf2f7; color: #4a5568; }
+.btn-secondary:hover { background: #e2e8f0; }
 .saved-list { display: flex; flex-direction: column; gap: 10px; }
 .saved-item { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
 .saved-item button { padding: 8px 16px; font-size: 14px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; }
+.saved-item button:hover { background: #5a67d8; }
 .progress-bar { height: 8px; background: #edf2f7; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
 .progress-fill { height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 0%; transition: width 0.3s ease; }
 .progress-text { text-align: right; font-size: 13px; color: #a0aec0; margin-bottom: 20px; }
