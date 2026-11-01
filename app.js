@@ -36,7 +36,6 @@ function initApp() {
   const btnLogin = document.getElementById('btn-login');
   const btnRegMode = document.getElementById('btn-register-mode');
   
-  // Логика глазика для пароля
   const togglePasswordBtn = document.getElementById('toggle-password');
   const passwordInput = document.getElementById('auth-password');
 
@@ -44,12 +43,10 @@ function initApp() {
     togglePasswordBtn.addEventListener('click', () => {
       const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
       passwordInput.setAttribute('type', type);
-      // Меняем иконку (открытый/закрытый глаз)
       togglePasswordBtn.textContent = type === 'password' ? '👁️' : '🙈';
     });
   }
 
-  // Переключение Вход / Регистрация
   btnRegMode.addEventListener('click', () => {
     isRegisterMode = !isRegisterMode;
     if (isRegisterMode) {
@@ -74,13 +71,10 @@ function initApp() {
 
     try {
       if (isRegisterMode) {
-        // РЕГИСТРАЦИЯ
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // Создаем пустую базу для пользователя
         await setDoc(doc(db, "users", userCredential.user.uid), { texts: [] });
         alert('Аккаунт создан!');
       } else {
-        // ВХОД
         await signInWithEmailAndPassword(auth, email, password);
       }
       document.getElementById('auth-login').value = '';
@@ -94,7 +88,6 @@ function initApp() {
     signOut(auth);
   });
 
-  // Отслеживаем состояние входа
   onAuthStateChanged(auth, (user) => {
     if (user) {
       currentUser = user;
@@ -148,7 +141,6 @@ function initApp() {
         container.appendChild(div);
       });
 
-      // Сохраняем тексты локально для быстрого доступа
       window.currentUserTexts = myTexts;
     } catch (e) {
       console.error(e);
@@ -253,11 +245,27 @@ function initApp() {
       input.type = 'text';
       input.placeholder = 'Напиши по памяти...';
       input.autocomplete = 'off';
+      
+      // ===== ЛОГИКА ENTER =====
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault(); // Запрещаем стандартное поведение (перенос строки/отправку формы)
+          
+          const inputs = document.querySelectorAll('#check-inputs input');
+          
+          if (i < inputs.length - 1) {
+            // Если это НЕ последнее поле -> переводим фокус на следующее
+            inputs[i + 1].focus();
+          } else {
+            // Если это ПОСЛЕДНЕЕ поле -> нажимаем кнопку "Проверить"
+            document.getElementById('btn-submit').click();
+          }
+        }
+      });
+      // =======================
+
       container.appendChild(label);
       container.appendChild(input);
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-submit').click(); }
-      });
     });
 
     showScreen('check');
