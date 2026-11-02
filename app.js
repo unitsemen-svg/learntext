@@ -15,14 +15,14 @@ function initApp() {
   let currentUser = null;
   let isRegisterMode = false;
   
-  // Добавили progress для сохранения
   let state = { 
     currentTextObj: null, 
     chunkIndex: 0, 
     currentRepeat: 0, 
     forceReadAgain: false, 
     isMergeCheck: false,
-    currentTextId: null // ID текста для сохранения прогресса
+    mergeRepeat: 0,
+    currentTextId: null 
   };
 
   const screens = {
@@ -139,7 +139,6 @@ function initApp() {
         const div = document.createElement('div');
         div.className = 'saved-item';
         
-        // Показываем прогресс, если он есть
         let progressText = '';
         if (text.progress && text.progress.chunkIndex > 0) {
            progressText = `<br><small style="color:#48bb78">Прогресс: блок ${text.progress.chunkIndex + 1}</small>`;
@@ -165,12 +164,10 @@ function initApp() {
     }
   }
 
-  // Обновленная функция старта
   window.startSavedText = function(index) {
     state.currentTextObj = window.currentUserTexts[index];
     state.currentTextId = index;
     
-    // Проверяем, есть ли сохраненный прогресс
     if (state.currentTextObj.progress && state.currentTextObj.progress.chunkIndex > 0) {
       const resume = confirm(`У вас есть сохраненный прогресс (Блок ${state.currentTextObj.progress.chunkIndex + 1}).\nПродолжить с этого места? (Нажмите "Отмена", чтобы начать заново)`);
       if (resume) {
@@ -187,10 +184,10 @@ function initApp() {
 
     state.forceReadAgain = false;
     state.isMergeCheck = false;
+    state.mergeRepeat = 0;
     showViewScreen();
   };
 
-  // Функция сохранения прогресса
   async function saveProgress() {
     if (!currentUser || !state.currentTextObj) return;
     try {
@@ -198,7 +195,6 @@ function initApp() {
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const texts = userDoc.data().texts;
-        // Сохраняем прогресс в объект текста
         texts[state.currentTextId].progress = {
           chunkIndex: state.chunkIndex,
           currentRepeat: state.currentRepeat
@@ -235,11 +231,11 @@ function initApp() {
       document.getElementById('text-title').value = '';
       document.getElementById('text-input').value = '';
       
-      // Устанавливаем ID для только что созданного текста
       state.currentTextId = existingTexts.length - 1;
       state.currentTextObj = newText;
       state.chunkIndex = 0;
       state.currentRepeat = 0;
+      state.mergeRepeat = 0;
       state.forceReadAgain = false;
       state.isMergeCheck = false;
       
@@ -263,29 +259,38 @@ function initApp() {
     return Math.ceil(state.currentTextObj.lines.length / state.currentTextObj.chunkSize);
   }
 
+  // Обновленная функция: теперь заполняет ВСЕ три списка на экранах
   function renderJumpSelect() {
-    const select = document.getElementById('jump-select');
-    if (!select) return;
-    select.innerHTML = '';
     const total = getTotalChunks();
     
-    for (let i = 0; i < total; i++) {
-      const option = document.createElement('option');
-      option.value = i;
-      option.textContent = `Блок ${i + 1} (стр. ${i * state.currentTextObj.chunkSize + 1}–${Math.min((i + 1) * state.currentTextObj.chunkSize, state.currentTextObj.lines.length)})`;
-      select.appendChild(option);
-    }
-    
-    select.value = state.chunkIndex;
-    
-    select.onchange = (e) => {
-      state.chunkIndex = parseInt(e.target.value, 10);
-      state.currentRepeat = 0;
-      state.forceReadAgain = false;
-      state.isMergeCheck = false;
-      saveProgress(); // Сохраняем, когда прыгаем вручную
-      showViewScreen();
-    };
+    // Список на экране просмотра
+    const selectView = document.getElementById('jump-select');
+    // Список на экране ввода
+    const selectCheck = document.getElementById('jump-select-check');
+    // Список на экране результата
+    const selectResult = document.getElementById('jump-select-result');
+
+    [selectView, selectCheck, selectResult].forEach(select => {
+      if (!select) return;
+      select.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Блок ${i + 1} (стр. ${i * state.currentTextObj.chunkSize + 1}–${Math.min((i + 1) * state.currentTextObj.chunkSize, state.currentTextObj.lines.length)})`;
+        select.appendChild(option);
+      }
+      select.value = state.chunkIndex;
+      
+      select.onchange = (e) => {
+        state.chunkIndex = parseInt(e.target.value, 10);
+        state.currentRepeat = 0;
+        state.mergeRepeat = 0;
+        state.forceReadAgain = false;
+        state.isMergeCheck = false;
+        saveProgress();
+        showViewScreen(); // Перекидываем на экран чтения этого блока
+      };
+    });
   }
 
   function showViewScreen() {
@@ -313,21 +318,31 @@ function initApp() {
     document.getElementById('progress-fill').style.width = (state.chunkIndex / total) * 100 + '%';
     
     if (state.isMergeCheck) {
-       document.getElementById('progress-text').textContent = `Снежный ком: строки 1–${(state.chunkIndex + 1) * state.currentTextObj.chunkSize}`;
+       document.getElementById('progress-text').textContent = `Снежный ком (1–${(state.chunkIndex + 1) * state.currentTextObj.chunkSize}) · повтор ${state.mergeRepeat + 1}/${state.currentTextObj.repeatsPerChunk}`;
     } else {
        document.getElementById('progress-text').textContent = `Блок ${state.chunkIndex + 1} из ${total} · повтор ${state.currentRepeat + 1}/${state.currentTextObj.repeatsPerChunk}`;
     }
     
     renderJumpSelect();
-    
-    // АВТОСОХРАНЕНИЕ при показе экрана
     saveProgress();
     
     showScreen('view');
     state.forceReadAgain = false;
+
+    document.removeEventListener('keydown', handleViewEnter);
+    document.addEventListener('keydown', handleViewEnter);
+  }
+
+  function handleViewEnter(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const btnNext = document.getElementById('btn-next');
+      if (btnNext) btnNext.click();
+    }
   }
 
   document.getElementById('btn-next').addEventListener('click', () => {
+    document.removeEventListener('keydown', handleViewEnter);
     showCheckScreen();
   });
 
@@ -335,6 +350,12 @@ function initApp() {
     const chunk = getCurrentChunk();
     const container = document.getElementById('check-inputs');
     container.innerHTML = '';
+
+    // Обновляем текст прогресса и список
+    const total = getTotalChunks();
+    document.getElementById('progress-fill-check').style.width = (state.chunkIndex / total) * 100 + '%';
+    document.getElementById('progress-text-check').textContent = `Блок ${state.chunkIndex + 1} из ${total}`;
+    renderJumpSelect();
 
     chunk.forEach((line, i) => {
       const label = document.createElement('label');
@@ -402,6 +423,10 @@ function initApp() {
       body.appendChild(item);
     });
 
+    // Обновляем список и прогресс на экране результата
+    document.getElementById('progress-text-result').textContent = `Блок ${state.chunkIndex + 1} из ${getTotalChunks()}`;
+    renderJumpSelect();
+
     const btnRepeat = document.getElementById('btn-repeat');
     const btnContinue = document.getElementById('btn-continue');
     const btnCombined = document.getElementById('btn-combined-check');
@@ -412,21 +437,37 @@ function initApp() {
 
     if (!allCorrect) {
       btnRepeat.textContent = 'Прочитать заново →';
-      btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
+      btnRepeat.onclick = () => { 
+        state.forceReadAgain = true; 
+        showViewScreen(); 
+      };
     } else {
       btnRepeat.textContent = 'Прочитать еще раз';
-      btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
+      btnRepeat.onclick = () => { 
+        state.forceReadAgain = true; 
+        showViewScreen(); 
+      };
 
       if (state.isMergeCheck) {
-        btnContinue.style.display = 'block';
-        btnContinue.textContent = 'Продолжить →';
-        btnContinue.onclick = () => {
-          state.isMergeCheck = false;
-          state.currentRepeat = 0;
-          state.chunkIndex++;
-          if (state.chunkIndex >= getTotalChunks()) showScreen('done');
-          else showViewScreen();
-        };
+        if (state.mergeRepeat < state.currentTextObj.repeatsPerChunk - 1) {
+          btnContinue.style.display = 'block';
+          btnContinue.textContent = 'Повторить снежный ком →';
+          btnContinue.onclick = () => {
+            state.mergeRepeat++;
+            showViewScreen();
+          };
+        } else {
+          btnContinue.style.display = 'block';
+          btnContinue.textContent = 'Завершить и продолжить →';
+          btnContinue.onclick = () => {
+            state.isMergeCheck = false;
+            state.mergeRepeat = 0;
+            state.currentRepeat = 0;
+            state.chunkIndex++;
+            if (state.chunkIndex >= getTotalChunks()) showScreen('done');
+            else showViewScreen();
+          };
+        }
       } else {
         if (state.currentRepeat === state.currentTextObj.repeatsPerChunk - 1) {
           if (state.chunkIndex > 0 || state.currentTextObj.chunkSize > 1) {
@@ -434,6 +475,7 @@ function initApp() {
             btnCombined.textContent = `📝 Соединить (строки 1–${(state.chunkIndex + 1) * state.currentTextObj.chunkSize})`;
             btnCombined.onclick = () => {
               state.isMergeCheck = true;
+              state.mergeRepeat = 0;
               state.forceReadAgain = false;
               showViewScreen();
             };
@@ -452,7 +494,7 @@ function initApp() {
           btnContinue.textContent = 'Продолжить →';
           btnContinue.onclick = () => {
             state.currentRepeat++;
-            saveProgress(); // Сохраняем повтор
+            saveProgress();
             showViewScreen();
           };
         }
@@ -462,7 +504,7 @@ function initApp() {
   }
 
   document.getElementById('btn-back-to-menu').addEventListener('click', () => {
-    saveProgress(); // Сохраняем при выходе в меню
+    saveProgress();
     renderSavedTexts();
     showScreen('menu');
   });
