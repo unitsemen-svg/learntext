@@ -20,8 +20,10 @@
     <section id="screen-auth" class="screen active">
       <h2 id="auth-title">Вход в систему</h2>
       <p class="hint" id="auth-hint">Введите Email и пароль. Если нет аккаунта — нажмите "Зарегистрироваться".</p>
+      
       <input type="email" id="auth-login" placeholder="Email (например, test@mail.ru)..." style="margin-bottom: 10px;">
-            <div style="position: relative; margin-bottom: 16px;">
+      
+      <div style="position: relative; margin-bottom: 16px;">
         <input type="password" id="auth-password" placeholder="Пароль (минимум 6 символов)..." style="width: 100%; padding-right: 40px;">
         <button type="button" id="toggle-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; opacity: 0.6; padding: 5px;">👁️</button>
       </div>
@@ -43,18 +45,26 @@
       
       <div class="settings">
         <label>Строчек за раз: 
-  <select id="lines-per-chunk">
-    <option value="1">1</option>
-    <option value="2" selected>2</option>
-    <option value="3">3</option>
-    <option value="4">4</option>
-    <option value="5">5</option>
-    <option value="6">6</option>
-    <option value="8">8</option>
-    <option value="10">10</option>
-  </select>
-</label>
-        <label>Повторов: <select id="repeats-per-chunk"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></label>
+          <select id="lines-per-chunk">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+          </select>
+        </label>
+        <label>Повторов: 
+          <select id="repeats-per-chunk">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
       </div>
       <button id="btn-start" class="btn btn-primary">Начать заучивание →</button>
     </section>
@@ -62,16 +72,27 @@
     <!-- ЭКРАН ПРОСМОТРА -->
     <section id="screen-view" class="screen">
       <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
-      <div class="progress-text" id="progress-text">0 / 0</div>
+      
+      <div id="chunk-navigation" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <span class="progress-text" id="progress-text" style="margin: 0;">0 / 0</span>
+        <select id="jump-select" style="padding: 6px 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; cursor: pointer;"></select>
+      </div>
+
       <h2>Запомни эти строчки</h2>
       <div id="view-lines" class="lines-display"></div>
+      <p class="hint" style="text-align: center; margin-top: 10px;">Нажми Enter, когда запомнишь</p>
       <button id="btn-next" class="btn btn-primary">Далее →</button>
     </section>
 
     <!-- ЭКРАН ПРОВЕРКИ -->
     <section id="screen-check" class="screen">
       <div class="progress-bar"><div id="progress-fill-check" class="progress-fill"></div></div>
-      <div class="progress-text" id="progress-text-check">0 / 0</div>
+      
+      <div id="chunk-navigation-check" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <span class="progress-text" id="progress-text-check" style="margin: 0;">0 / 0</span>
+        <select id="jump-select-check" style="padding: 6px 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; cursor: pointer;"></select>
+      </div>
+
       <h2>Напиши по памяти</h2>
       <div id="check-inputs" class="check-inputs"></div>
       <button id="btn-submit" class="btn btn-primary">Проверить ✓</button>
@@ -79,6 +100,11 @@
 
     <!-- ЭКРАН РЕЗУЛЬТАТА -->
     <section id="screen-result" class="screen">
+      <div id="chunk-navigation-result" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <span class="progress-text" id="progress-text-result" style="margin: 0;">0 / 0</span>
+        <select id="jump-select-result" style="padding: 6px 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; cursor: pointer;"></select>
+      </div>
+
       <h2 id="result-title">Результат</h2>
       <div id="result-body"></div>
       <div class="result-buttons">
@@ -87,7 +113,7 @@
         <button id="btn-continue" class="btn btn-primary">Продолжить →</button>
       </div>
     </section>
-    
+
     <!-- ФИНАЛ -->
     <section id="screen-done" class="screen">
       <h2>🎉 Поздравляем!</h2>
