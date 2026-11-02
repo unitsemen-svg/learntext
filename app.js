@@ -14,8 +14,16 @@ function initApp() {
 
   let currentUser = null;
   let isRegisterMode = false;
-  // Добавили isMergeCheck для проверки "Снежного кома"
-  let state = { currentTextObj: null, chunkIndex: 0, currentRepeat: 0, forceReadAgain: false, isMergeCheck: false };
+  
+  // Добавили progress для сохранения
+  let state = { 
+    currentTextObj: null, 
+    chunkIndex: 0, 
+    currentRepeat: 0, 
+    forceReadAgain: false, 
+    isMergeCheck: false,
+    currentTextId: null // ID текста для сохранения прогресса
+  };
 
   const screens = {
     auth: document.getElementById('screen-auth'),
@@ -130,10 +138,18 @@ function initApp() {
       myTexts.forEach((text, index) => {
         const div = document.createElement('div');
         div.className = 'saved-item';
+        
+        // Показываем прогресс, если он есть
+        let progressText = '';
+        if (text.progress && text.progress.chunkIndex > 0) {
+           progressText = `<br><small style="color:#48bb78">Прогресс: блок ${text.progress.chunkIndex + 1}</small>`;
+        }
+
         div.innerHTML = `
           <div>
             <strong>${text.title}</strong><br>
             <small style="color:#718096">Строчек: ${text.lines.length}</small>
+            ${progressText}
           </div>
           <div>
             <button onclick="startSavedText(${index})">Учить</button>
@@ -149,10 +165,50 @@ function initApp() {
     }
   }
 
+  // Обновленная функция старта
   window.startSavedText = function(index) {
     state.currentTextObj = window.currentUserTexts[index];
-    startLearning();
+    state.currentTextId = index;
+    
+    // Проверяем, есть ли сохраненный прогресс
+    if (state.currentTextObj.progress && state.currentTextObj.progress.chunkIndex > 0) {
+      const resume = confirm(`У вас есть сохраненный прогресс (Блок ${state.currentTextObj.progress.chunkIndex + 1}).\nПродолжить с этого места? (Нажмите "Отмена", чтобы начать заново)`);
+      if (resume) {
+        state.chunkIndex = state.currentTextObj.progress.chunkIndex;
+        state.currentRepeat = state.currentTextObj.progress.currentRepeat || 0;
+      } else {
+        state.chunkIndex = 0;
+        state.currentRepeat = 0;
+      }
+    } else {
+      state.chunkIndex = 0;
+      state.currentRepeat = 0;
+    }
+
+    state.forceReadAgain = false;
+    state.isMergeCheck = false;
+    showViewScreen();
   };
+
+  // Функция сохранения прогресса
+  async function saveProgress() {
+    if (!currentUser || !state.currentTextObj) return;
+    try {
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const texts = userDoc.data().texts;
+        // Сохраняем прогресс в объект текста
+        texts[state.currentTextId].progress = {
+          chunkIndex: state.chunkIndex,
+          currentRepeat: state.currentRepeat
+        };
+        await setDoc(userDocRef, { texts });
+      }
+    } catch (e) {
+      console.error("Ошибка сохранения прогресса:", e);
+    }
+  }
 
   // ===== СОХРАНЕНИЕ НОВОГО ТЕКСТА =====
   document.getElementById('btn-start').addEventListener('click', async () => {
@@ -166,7 +222,7 @@ function initApp() {
 
     const chunkSize = parseInt(document.getElementById('lines-per-chunk').value, 10);
     const repeatsPerChunk = parseInt(document.getElementById('repeats-per-chunk').value, 10);
-    const newText = { title, lines, chunkSize, repeatsPerChunk };
+    const newText = { title, lines, chunkSize, repeatsPerChunk, progress: { chunkIndex: 0, currentRepeat: 0 } };
     
     try {
       const userDocRef = doc(db, "users", currentUser.uid);
@@ -179,33 +235,27 @@ function initApp() {
       document.getElementById('text-title').value = '';
       document.getElementById('text-input').value = '';
       
+      // Устанавливаем ID для только что созданного текста
+      state.currentTextId = existingTexts.length - 1;
       state.currentTextObj = newText;
-      startLearning();
+      state.chunkIndex = 0;
+      state.currentRepeat = 0;
+      state.forceReadAgain = false;
+      state.isMergeCheck = false;
+      
+      showViewScreen();
     } catch (e) {
       alert('Ошибка сохранения: ' + e.message);
     }
   });
 
   // ===== ЛОГИКА ЗАУЧИВАНИЯ =====
-  function startLearning() {
-    state.chunkIndex = 0;
-    state.currentRepeat = 0;
-    state.forceReadAgain = false;
-    state.isMergeCheck = false;
-    showViewScreen();
-  }
-
-  // Получить строки для текущего экрана (обычный блок или "снежный ком")
   function getCurrentChunk() {
     const t = state.currentTextObj;
-    
     if (state.isMergeCheck) {
-      // Если это проверка "Снежного кома" — берем ВСЕ строки с самого начала до конца текущего блока
       const endIndex = (state.chunkIndex + 1) * t.chunkSize;
       return t.lines.slice(0, endIndex);
     }
-    
-    // Обычный блок
     return t.lines.slice(state.chunkIndex * t.chunkSize, state.chunkIndex * t.chunkSize + t.chunkSize);
   }
 
@@ -233,6 +283,7 @@ function initApp() {
       state.currentRepeat = 0;
       state.forceReadAgain = false;
       state.isMergeCheck = false;
+      saveProgress(); // Сохраняем, когда прыгаем вручную
       showViewScreen();
     };
   }
@@ -269,13 +320,14 @@ function initApp() {
     
     renderJumpSelect();
     
+    // АВТОСОХРАНЕНИЕ при показе экрана
+    saveProgress();
+    
     showScreen('view');
     state.forceReadAgain = false;
   }
 
   document.getElementById('btn-next').addEventListener('click', () => {
-    // Если мы нажали "Далее" с экрана просмотра (обычный блок или снежный ком)
-    // Флаг isMergeCheck сохраняется таким, каким он был!
     showCheckScreen();
   });
 
@@ -296,7 +348,6 @@ function initApp() {
         if (e.key === 'Enter') {
           e.preventDefault(); 
           const inputs = document.querySelectorAll('#check-inputs input');
-          
           if (i < inputs.length - 1) {
             inputs[i + 1].focus();
           } else {
@@ -355,28 +406,18 @@ function initApp() {
     const btnContinue = document.getElementById('btn-continue');
     const btnCombined = document.getElementById('btn-combined-check');
 
-    // Прячем все кнопки по умолчанию
     btnCombined.style.display = 'none';
     btnRepeat.style.display = 'block';
     btnContinue.style.display = 'none';
 
     if (!allCorrect) {
-      // ЕСЛИ ОШИБКА
       btnRepeat.textContent = 'Прочитать заново →';
-      btnRepeat.onclick = () => { 
-        state.forceReadAgain = true; 
-        showViewScreen(); 
-      };
+      btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
     } else {
-      // ЕСЛИ ВСЁ ВЕРНО
       btnRepeat.textContent = 'Прочитать еще раз';
-      btnRepeat.onclick = () => { 
-        state.forceReadAgain = true; 
-        showViewScreen(); 
-      };
+      btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
 
       if (state.isMergeCheck) {
-        // Мы только что успешно написали "Снежный ком"
         btnContinue.style.display = 'block';
         btnContinue.textContent = 'Продолжить →';
         btnContinue.onclick = () => {
@@ -387,16 +428,11 @@ function initApp() {
           else showViewScreen();
         };
       } else {
-        // Обычная проверка блока. Смотрим, закончили ли мы повторы
         if (state.currentRepeat === state.currentTextObj.repeatsPerChunk - 1) {
-          // Это был последний повтор этого блока!
-          
-          // Предлагаем "Снежный ком" (если это не первый блок, или если в блоке > 1 строки)
           if (state.chunkIndex > 0 || state.currentTextObj.chunkSize > 1) {
             btnCombined.style.display = 'block';
             btnCombined.textContent = `📝 Соединить (строки 1–${(state.chunkIndex + 1) * state.currentTextObj.chunkSize})`;
             btnCombined.onclick = () => {
-              // Включаем режим снежного кома и показываем текст ДЛЯ ЧТЕНИЯ
               state.isMergeCheck = true;
               state.forceReadAgain = false;
               showViewScreen();
@@ -412,11 +448,11 @@ function initApp() {
             else showViewScreen();
           };
         } else {
-          // Еще не все повторы сделаны
           btnContinue.style.display = 'block';
           btnContinue.textContent = 'Продолжить →';
           btnContinue.onclick = () => {
             state.currentRepeat++;
+            saveProgress(); // Сохраняем повтор
             showViewScreen();
           };
         }
@@ -426,6 +462,7 @@ function initApp() {
   }
 
   document.getElementById('btn-back-to-menu').addEventListener('click', () => {
+    saveProgress(); // Сохраняем при выходе в меню
     renderSavedTexts();
     showScreen('menu');
   });
