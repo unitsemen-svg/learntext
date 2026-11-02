@@ -14,8 +14,8 @@ function initApp() {
 
   let currentUser = null;
   let isRegisterMode = false;
-  // Добавили isCombinedCheck
-  let state = { currentTextObj: null, chunkIndex: 0, currentRepeat: 0, forceReadAgain: false, isCombinedCheck: false };
+  // Добавили isMergeCheck для проверки "Снежного кома"
+  let state = { currentTextObj: null, chunkIndex: 0, currentRepeat: 0, forceReadAgain: false, isMergeCheck: false };
 
   const screens = {
     auth: document.getElementById('screen-auth'),
@@ -191,16 +191,21 @@ function initApp() {
     state.chunkIndex = 0;
     state.currentRepeat = 0;
     state.forceReadAgain = false;
-    state.isCombinedCheck = false;
+    state.isMergeCheck = false;
     showViewScreen();
   }
 
+  // Получить строки для текущего экрана (обычный блок или "снежный ком")
   function getCurrentChunk() {
     const t = state.currentTextObj;
-    if (state.isCombinedCheck) {
-      // Если это совместная проверка, берем весь текущий блок
-      return t.lines.slice(state.chunkIndex * t.chunkSize, state.chunkIndex * t.chunkSize + t.chunkSize);
+    
+    if (state.isMergeCheck) {
+      // Если это проверка "Снежного кома" — берем ВСЕ строки с самого начала до конца текущего блока
+      const endIndex = (state.chunkIndex + 1) * t.chunkSize;
+      return t.lines.slice(0, endIndex);
     }
+    
+    // Обычный блок
     return t.lines.slice(state.chunkIndex * t.chunkSize, state.chunkIndex * t.chunkSize + t.chunkSize);
   }
 
@@ -227,7 +232,7 @@ function initApp() {
       state.chunkIndex = parseInt(e.target.value, 10);
       state.currentRepeat = 0;
       state.forceReadAgain = false;
-      state.isCombinedCheck = false;
+      state.isMergeCheck = false;
       showViewScreen();
     };
   }
@@ -255,7 +260,12 @@ function initApp() {
 
     const total = getTotalChunks();
     document.getElementById('progress-fill').style.width = (state.chunkIndex / total) * 100 + '%';
-    document.getElementById('progress-text').textContent = `Блок ${state.chunkIndex + 1} из ${total} · повтор ${state.currentRepeat + 1}/${state.currentTextObj.repeatsPerChunk}`;
+    
+    if (state.isMergeCheck) {
+       document.getElementById('progress-text').textContent = `Снежный ком: строки 1–${(state.chunkIndex + 1) * state.currentTextObj.chunkSize}`;
+    } else {
+       document.getElementById('progress-text').textContent = `Блок ${state.chunkIndex + 1} из ${total} · повтор ${state.currentRepeat + 1}/${state.currentTextObj.repeatsPerChunk}`;
+    }
     
     renderJumpSelect();
     
@@ -264,7 +274,8 @@ function initApp() {
   }
 
   document.getElementById('btn-next').addEventListener('click', () => {
-    state.isCombinedCheck = false; // Сбрасываем флаг при обычном старте
+    // Если мы нажали "Далее" с экрана просмотра (обычный блок или снежный ком)
+    // Флаг isMergeCheck сохраняется таким, каким он был!
     showCheckScreen();
   });
 
@@ -344,58 +355,72 @@ function initApp() {
     const btnContinue = document.getElementById('btn-continue');
     const btnCombined = document.getElementById('btn-combined-check');
 
-    // Логика отображения кнопок
+    // Прячем все кнопки по умолчанию
+    btnCombined.style.display = 'none';
+    btnRepeat.style.display = 'block';
+    btnContinue.style.display = 'none';
+
     if (!allCorrect) {
-      // Если ошибка - заставляем перечитать
-      btnCombined.style.display = 'none';
-      btnRepeat.style.display = 'block';
+      // ЕСЛИ ОШИБКА
       btnRepeat.textContent = 'Прочитать заново →';
-      btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
-      btnContinue.style.display = 'none';
-      
-    } else if (state.isCombinedCheck) {
-      // Если это была совместная проверка и всё верно - идем дальше
-      btnCombined.style.display = 'none';
-      btnRepeat.style.display = 'block';
-      btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
-      
-      btnContinue.style.display = 'block';
-      btnContinue.onclick = () => {
-        state.isCombinedCheck = false;
-        state.currentRepeat = 0;
-        state.chunkIndex++;
-        if (state.chunkIndex >= getTotalChunks()) showScreen('done');
-        else showViewScreen();
+      btnRepeat.onclick = () => { 
+        state.forceReadAgain = true; 
+        showViewScreen(); 
       };
-      
     } else {
-      // Если обычная проверка и всё верно
-      btnRepeat.style.display = 'block';
-      btnRepeat.onclick = () => { state.forceReadAgain = true; showViewScreen(); };
-      
-      // Если это последний повтор в блоке и строчек больше 1, предлагаем "Написать всё вместе"
-      if (state.currentRepeat === state.currentTextObj.repeatsPerChunk - 1 && state.currentTextObj.chunkSize > 1) {
-        btnCombined.style.display = 'block';
-        btnCombined.onclick = () => {
-          state.isCombinedCheck = true;
-          showCheckScreen(); // Открываем ввод, но без показа текста
-        };
-      } else {
-        btnCombined.style.display = 'none';
-      }
-      
-      btnContinue.style.display = 'block';
-      btnContinue.onclick = () => {
-        state.currentRepeat++;
-        if (state.currentRepeat < state.currentTextObj.repeatsPerChunk) {
-          showViewScreen();
-        } else {
+      // ЕСЛИ ВСЁ ВЕРНО
+      btnRepeat.textContent = 'Прочитать еще раз';
+      btnRepeat.onclick = () => { 
+        state.forceReadAgain = true; 
+        showViewScreen(); 
+      };
+
+      if (state.isMergeCheck) {
+        // Мы только что успешно написали "Снежный ком"
+        btnContinue.style.display = 'block';
+        btnContinue.textContent = 'Продолжить →';
+        btnContinue.onclick = () => {
+          state.isMergeCheck = false;
           state.currentRepeat = 0;
           state.chunkIndex++;
           if (state.chunkIndex >= getTotalChunks()) showScreen('done');
           else showViewScreen();
+        };
+      } else {
+        // Обычная проверка блока. Смотрим, закончили ли мы повторы
+        if (state.currentRepeat === state.currentTextObj.repeatsPerChunk - 1) {
+          // Это был последний повтор этого блока!
+          
+          // Предлагаем "Снежный ком" (если это не первый блок, или если в блоке > 1 строки)
+          if (state.chunkIndex > 0 || state.currentTextObj.chunkSize > 1) {
+            btnCombined.style.display = 'block';
+            btnCombined.textContent = `📝 Соединить (строки 1–${(state.chunkIndex + 1) * state.currentTextObj.chunkSize})`;
+            btnCombined.onclick = () => {
+              // Включаем режим снежного кома и показываем текст ДЛЯ ЧТЕНИЯ
+              state.isMergeCheck = true;
+              state.forceReadAgain = false;
+              showViewScreen();
+            };
+          }
+          
+          btnContinue.style.display = 'block';
+          btnContinue.textContent = 'Пропустить снежный ком →';
+          btnContinue.onclick = () => {
+            state.currentRepeat = 0;
+            state.chunkIndex++;
+            if (state.chunkIndex >= getTotalChunks()) showScreen('done');
+            else showViewScreen();
+          };
+        } else {
+          // Еще не все повторы сделаны
+          btnContinue.style.display = 'block';
+          btnContinue.textContent = 'Продолжить →';
+          btnContinue.onclick = () => {
+            state.currentRepeat++;
+            showViewScreen();
+          };
         }
-      };
+      }
     }
     showScreen('result');
   }
